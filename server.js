@@ -17,9 +17,13 @@ app.use(cookieParser())
 
 //routes
 const authRoute = require('./routes/authRoutes')
+const categoryRoute = require('./routes/dashboard/categoryRoute')
+const productRoute = require('./routes/dashboard/productRoute')
 
 
 app.use('/api',authRoute)
+app.use('/api', categoryRoute)
+app.use('/api', productRoute)
 
 
 app.get('/', (req, res) => res.send('Hello MM Fashion world!'))
