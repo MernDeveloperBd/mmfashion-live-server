@@ -3,11 +3,9 @@ const { default: mongoose } = require("mongoose")
 const dbConnect = async()=>{
     try {
         await mongoose.connect(process.env.DB_URL,{
-            useNewURLParser:true })
-            console.log('database connected ..');
-            
+            useNewURLParser:true })            
     } catch (error) { 
-        console.log(error.message);
+       ;
         
     }
 }

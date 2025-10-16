@@ -27,7 +27,6 @@ class ProductController {
   add_product = async (req, res) => {
     // If auth middleware attaches user id, use it:
     const { id } = req;
-    console.log(id,);
 
     const sellerId = req.user?.id || req.user?._id || req.sellerId || id || null;
 
@@ -81,7 +80,6 @@ class ProductController {
           const f = imagesArray[i];
           const filePath = f.filepath || f.path;
           if (!filePath) {
-            console.warn("no filepath for uploaded file", f);
             continue;
           }
           const result = await cloudinary.uploader.upload(filePath, { folder: "products" });
@@ -125,7 +123,6 @@ class ProductController {
 
         return responseReturn(res, 201, { product, message: "Product added successfully" });
       } catch (err) {
-        console.error("add_product error:", err);
         return responseReturn(res, 500, { error: "Internal server error", detail: err.message });
       }
     }); // end form.parse
@@ -153,7 +150,6 @@ class ProductController {
         responseReturn(res, 200, { totalProduct, products })
       }
     } catch (err) {
-      console.error("get_products error:", err);
       return responseReturn(res, 500, { error: "Failed to fetch products" });
     }
   };
@@ -161,25 +157,19 @@ class ProductController {
   // single product get
   get_product = async (req, res) => {
     const { productId } = req.params;
-    console.log("produtid", productId);
     try {
       const product = await productModel.findById(productId);
-      return responseReturn(res, 200, { product });
-    } catch (err) {
-      console.error("get_products error:", err);
+      return responseReturn
       return responseReturn(res, 500, { error: "Failed to fetch products" });
     }
   };
 
   // update product 
   update_product = async (req, res) => {
-    console.log("produtid update",  req.body);
     let{name,description,price, oldPrice, discount, resellingPrice, brand, fbProductLink, sku,productId, stock} = req.body;
 
       name = safeString(fields.name).trim();
       const slug = slugify(name, { lower: true, strict: true });
-     
-       console.log("produtid update",  req.body, slug);
        try {
         await productModel.findByIdAndUpdate(productId, {
           name,slug, description,price, oldPrice, discount, resellingPrice, brand, fbProductLink, sku, stock
@@ -204,7 +194,6 @@ class ProductController {
       // Optionally: remove images from cloudinary using public_id if you saved it
       return responseReturn(res, 200, { message: 'Product deleted', id });
     } catch (err) {
-      console.error('delete_product err', err);
       return responseReturn(res, 500, { error: 'Failed to delete product' });
     }
   }

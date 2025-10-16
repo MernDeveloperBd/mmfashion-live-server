@@ -1,4 +1,4 @@
-const formidable = require("formidable");
+// const formidable = require("formidable");
 const formidableLib = require('formidable');
 const cloudinary = require("cloudinary").v2;
 const fs = require('fs');
@@ -8,6 +8,12 @@ const createToken = require('../utils/tokenCreate');
 const { responseReturn } = require('../utils/response');
 const sellerModel = require("../models/sellerModel");
 const sellerCustomerModel = require("../models/chat/sellerCustomerModel");
+const customerModel = require("../models/customerModel");
+const referralEventModel = require('../models/referralEventModel');
+
+const CLIENT_BASE_URL = process.env.CLIENT_BASE_URL || 'http://localhost:5173';
+
+
 class authController {
     admin_login = async (req, res) => {
         const { email, password } = req.body;
@@ -62,7 +68,6 @@ class authController {
                     method: 'manualy',
                     shopInfo: {}
                 })
-                console.log(seller);
                 await sellerCustomerModel.create({
                     myId: seller.id
                 })
@@ -92,22 +97,19 @@ class authController {
             if (!match) {
                 return responseReturn(res, 400, { error: "Password is incorrect" });
             }
-
-            // ✅ টোকেন তৈরি
+            
             const token = await createToken({
                 id: seller.id,
                 role: seller.role
             });
-
-            // ✅ কুকি সেট (সঠিক expires সহ)
+           
             res.cookie('accessToken', token, {
                 expires: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
                 httpOnly: true,
                 secure: process.env.SECRET === 'production',
                 sameSite: 'strict'
             });
-
-            // ✅ সফল লগইন রেসপন্স
+          
             return responseReturn(res, 200, {
                 message: "Login successful", token: token,
                 user: { name: seller.name, email: seller.email }
@@ -117,10 +119,11 @@ class authController {
             return responseReturn(res, 500, { error: error.message });
         }
     }
+
+    
     // get user
     getUser = async (req, res) => {
         const { id, role } = req;
-        console.log(id, role);
         try {
             if (role === 'admin') {
                 const user = await adminModel.findById(id)
@@ -136,6 +139,32 @@ class authController {
 
     }
 
+    // Get users
+    get_users = async (req, res) => {
+    let { page = 1, perPage = 10, searchValue = '' } = req.query;
+    page = parseInt(page);
+    perPage = parseInt(perPage);
+    const skipPage = perPage * (page - 1);
+
+    try {
+      const regex = searchValue ? new RegExp(searchValue, 'i') : null;
+      const query = regex ? { $or: [{ name: regex }, { email: regex }] } : {};
+
+      const users = await customerModel
+        .find(query)
+        .select('-password') // পাসওয়ার্ড পাঠাবেন না
+        .skip(skipPage)
+        .limit(perPage)
+        .sort({ createdAt: -1 });
+
+      const totalUser = await customerModel.countDocuments(query);
+
+      return responseReturn(res, 200, { users, totalUser });
+    } catch (error) {
+      return responseReturn(res, 500, { error: error.message });
+    }
+  }
+
     //profile picture upload
     profile_image_upload = async (req, res) => {
         try {
@@ -148,12 +177,10 @@ class authController {
             } else if (formidableLib && typeof formidableLib.Formidable === 'function') {
                 form = new formidableLib.Formidable(opts);
             } else {
-                console.error('Unsupported formidable export:', formidableLib);
                 return responseReturn(res, 500, { error: 'Unsupported formidable version' });
             }
             form.parse(req, async (err, fields, files) => {
                 if (err) {
-                    console.error('form.parse error:', err);
                     return responseReturn(res, 500, { error: 'Form parse error', detail: err.message });
                 }
 
@@ -177,12 +204,10 @@ class authController {
 
                     return responseReturn(res, 200, { message: 'Image uploaded', image: result.secure_url || result.url });
                 } catch (uploadErr) {
-                    console.error('uploadErr:', uploadErr);
                     return responseReturn(res, 500, { error: 'Image upload failed', detail: uploadErr.message });
                 }
             });
         } catch (e) {
-            console.error('profile_image_upload unexpected error:', e);
             return responseReturn(res, 500, { error: 'Server error', detail: e.message });
         }
     }
@@ -202,10 +227,162 @@ class authController {
         } catch (error) {
             responseReturn(res, 500, { error: error.message })
         }
-
-
-
     }
+
+      logout = async (req, res) => {
+        try {
+            res.cookie('accessToken',null,{
+                expires : new Date(Date.now()),
+                httpOnly : true
+            })
+            responseReturn(res,200,{message : 'logout success'})
+        } catch (error) {
+            responseReturn(res, 500, { error: error.message })
+        }
+    }
+
+     change_password = async (req, res) => {
+    try {
+      const { oldPassword, newPassword } = req.body;
+      const userId = req.id;
+      const role = req.role;
+
+      if (!userId) {
+        return responseReturn(res, 409, { error: 'Please Login first' });
+      }
+      if (!oldPassword || !newPassword) {
+        return responseReturn(res, 400, { error: 'Old and new passwords required' });
+      }
+      if (newPassword.length < 8) {
+        return responseReturn(res, 400, { error: 'New password must be at least 8 characters' });
+      }
+      // Optional: আরও স্ট্রং চেক
+      // if (!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(newPassword)) {
+      //   return responseReturn(res, 400, { error: 'Password must contain uppercase, lowercase & number' });
+      // }
+
+      // role অনুযায়ী model সিলেক্ট
+      const Model = role === 'admin' ? adminModel : sellerModel;
+
+      const user = await Model.findById(userId).select('+password');
+      if (!user) {
+        return responseReturn(res, 404, { error: 'User not found' });
+      }
+
+      const isMatch = await bcrypt.compare(oldPassword, user.password);
+      if (!isMatch) {
+        return responseReturn(res, 400, { error: 'Invalid old password' });
+      }
+
+      const sameAsOld = await bcrypt.compare(newPassword, user.password);
+      if (sameAsOld) {
+        return responseReturn(res, 400, { error: 'New password cannot be same as old password' });
+      }
+
+      const salt = await bcrypt.genSalt(12);
+      user.password = await bcrypt.hash(newPassword, salt);
+      await user.save();
+
+      // Force logout: cookie clear
+      res.clearCookie('accessToken', {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict'
+      });
+
+      return responseReturn(res, 200, { message: 'Password changed successfully! Please login again.' });
+    } catch (err) {
+      return responseReturn(res, 500, { error: 'Server error' });
+    }
+  };
+
+   profile_basic_update = async (req, res) => {
+    try {
+      const { name, email } = req.body;
+      const { id, role } = req;
+      const Model = role === 'admin' ? adminModel : sellerModel;
+
+      const updates = {};
+      if (name) updates.name = name.trim();
+      if (email) {
+        const exists = await Model.findOne({ email: email.trim(), _id: { $ne: id } });
+        if (exists) return responseReturn(res, 400, { error: 'Email already in use' });
+        updates.email = email.trim();
+      }
+
+      if (!Object.keys(updates).length) {
+        return responseReturn(res, 400, { error: 'Nothing to update' });
+      }
+
+      const user = await Model.findByIdAndUpdate(id, updates, { new: true });
+      if (!user) return responseReturn(res, 404, { error: 'User not found' });
+
+      return responseReturn(res, 200, { message: 'Profile updated', userInfo: user });
+    } catch (e) {
+      return responseReturn(res, 500, { error: e.message });
+    }
+  };
+  
+  get_user_referrals = async (req, res) => {
+  try {
+    // Optional: admin guard (আপনার authMiddleware যদি req.role সেট করে)
+    // if (req.role !== 'admin') return responseReturn(res, 403, { error: 'Forbidden' });
+
+    const { userId } = req.params;
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const perPage = Math.max(1, Math.min(100, parseInt(req.query.perPage) || 10));
+
+    const customer = await customerModel.findById(userId)
+      .select('name email referralCode referralStats referralBalance referralPending referredBy createdAt');
+    if (!customer) {
+      return responseReturn(res, 404, { error: 'Customer not found' });
+    }
+
+    const link = `${CLIENT_BASE_URL}/register?ref=${encodeURIComponent(customer.referralCode || '')}`;
+
+    const total = await referralEventModel.countDocuments({ referrerId: userId });
+
+    const eventsDocs = await referralEventModel.find({ referrerId: userId })
+      .sort({ createdAt: -1 })
+      .skip((page - 1) * perPage)
+      .limit(perPage)
+      .populate('referredUserId', 'name email referralCode createdAt');
+
+    let referredBy = null;
+    if (customer.referredBy) {
+      const rb = await customerModel.findById(customer.referredBy).select('name email referralCode');
+      if (rb) referredBy = { _id: rb._id, name: rb.name, email: rb.email, referralCode: rb.referralCode };
+    }
+
+    const events = eventsDocs.map(ev => ({
+      id: ev._id,
+      referredUser: ev.referredUserId ? {
+        _id: ev.referredUserId._id,
+        name: ev.referredUserId.name,
+        email: ev.referredUserId.email,
+        referralCode: ev.referredUserId.referralCode || null,
+        joinedAt: ev.referredUserId.createdAt
+      } : null,
+      referredAt: ev.createdAt
+    }));
+
+    return responseReturn(res, 200, {
+      summary: {
+        code: customer.referralCode || null,
+        link,
+        totalSignups: customer.referralStats?.totalSignups || 0,
+        balance: customer.referralBalance || 0,
+        pending: customer.referralPending || 0,
+        referredBy
+      },
+      events: { data: events, total, page, perPage }
+    });
+  } catch (e) {
+    return responseReturn(res, 500, { error: 'Server error' });
+  }
+};
+ 
+
 
 
 }
