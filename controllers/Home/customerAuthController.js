@@ -46,7 +46,7 @@ const pickGender = (v) => {
 
 const REFERRAL_THRESHOLD = 10;
 const REFERRAL_REWARD = 1;
-const CLIENT_URL = process.env.CLIENT_URL ||  process.env.ADMIN_URL;
+const CLIENT_BASE_URL = process.env.CLIENT_BASE_URL ||  process.env.ADMIN_URL;
 
 class customerAuthController {
 
@@ -207,7 +207,7 @@ class customerAuthController {
       if (!me) return responseReturn(res, 404, { error: 'Customer not found' });
 
       const code = me.referralCode;
-      const link = `${CLIENT_URL}/register?ref=${encodeURIComponent(code)}`;
+      const link = `${CLIENT_BASE_URL}/register?ref=${encodeURIComponent(code)}`;
 
       // simple stats (without pagination)
       const totalSignups = me.referralStats?.totalSignups || 0;
@@ -250,7 +250,7 @@ class customerAuthController {
       me.referralCodeUpdatedAt = new Date();
       await me.save();
 
-      const link = `${CLIENT_URL}/register?ref=${encodeURIComponent(code)}`;
+      const link = `${CLIENT_BASE_URL}/register?ref=${encodeURIComponent(code)}`;
       return responseReturn(res, 200, { message: 'Referral alias updated', code, link });
     } catch (e) {
       return responseReturn(res, 500, { error: e.message });

@@ -11,7 +11,7 @@ const sellerCustomerModel = require("../models/chat/sellerCustomerModel");
 const customerModel = require("../models/customerModel");
 const referralEventModel = require('../models/referralEventModel');
 
-const CLIENT_URL = process.env.CLIENT_URL ||  process.env.ADMIN_URL;
+const CLIENT_BASE_URL = process.env.CLIENT_BASE_URL ||  process.env.ADMIN_URL;
 
 
 class authController {
@@ -338,7 +338,7 @@ class authController {
       return responseReturn(res, 404, { error: 'Customer not found' });
     }
 
-    const link = `${CLIENT_URL}/register?ref=${encodeURIComponent(customer.referralCode || '')}`;
+    const link = `${CLIENT_BASE_URL}/register?ref=${encodeURIComponent(customer.referralCode || '')}`;
 
     const total = await referralEventModel.countDocuments({ referrerId: userId });
 
