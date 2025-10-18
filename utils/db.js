@@ -9,10 +9,10 @@ const dbConnect = async () => {
             })
             console.log("db connected");
         } else {
-            await mongoose.connect(process.env.DB_PRO_URL, {
+            await mongoose.connect(process.env.DB_LOCAL_URL, {
                 useNewURLParser: true
             })
-             console.log("prodcction db connected");
+             console.log("Local db connected");
         }
     } catch (error) {
         ;
