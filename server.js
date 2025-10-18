@@ -13,7 +13,7 @@ const server = http.createServer(app)
 const dbConnect = require('./utils/db')
 dbConnect()
 
-app.use(cors({
+/* app.use(cors({
     origin:process.env.mode === 'pro' ? [process.env.CLIENT_CUSTOMER_PRO_URL, process.env.CLIENT_ADMIN_PRO_URL]:['http://localhost:5173','http://localhost:5174'],
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
@@ -23,6 +23,20 @@ app.use(cors({
 const io = socket(server, {
     cors: {
         origin: process.env.mode === 'pro' ? [process.env.CLIENT_CUSTOMER_PRO_URL, process.env.CLIENT_ADMIN_PRO_URL]:['http://localhost:5173','http://localhost:5174'],
+        credentials: true
+    }
+}) */
+
+    app.use(cors({
+    origin:[process.env.CLIENT_CUSTOMER_PRO_URL, process.env.CLIENT_ADMIN_PRO_URL],
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization']
+}));
+
+const io = socket(server, {
+    cors: {
+        origin: [process.env.CLIENT_CUSTOMER_PRO_URL, process.env.CLIENT_ADMIN_PRO_URL],
         credentials: true
     }
 })
