@@ -12,7 +12,7 @@ const { mongo: { ObjectId } } = require('mongoose')
 const { responseReturn } = require('../../utils/response');
 
 
-module.exports.get_seller_dashboard_data = async (req, res) => {
+ module.exports.get_seller_dashboard_data = async (req, res) => {
     const { id } = req;
 
     try {
@@ -84,43 +84,40 @@ module.exports.get_seller_dashboard_data = async (req, res) => {
     } catch (error) {
         console.log('get seller dashboard data error ' + error.messages)
     }
-}
+} 
+
+
 
 module.exports.get_admin_dashboard_data = async (req, res) => {
-    const { id } = req
-    try {
-        const totalSele = await myShopWallet.aggregate([
-            {
-                $group: {
-                    _id: null,
-                    totalAmount: { $sum: '$amount' }
-                }
-            }
-        ])
+  try {
+    // Total sales from PAID orders (stripe + bkash)
+    const saleAgg = await customerOrder.aggregate([
+      { $match: { payment_status: 'paid' } },
+      { $group: { _id: null, total: { $sum: '$price' } } }
+    ]);
+    const totalSale = saleAgg?.[0]?.total || 0;
 
+    const totalProduct = await productModel.countDocuments({});
+    const totalOrder = await customerOrder.countDocuments({});
+    const totalSeller = await sellerModel.countDocuments({});
+    const messages = await adminSellerMessage.find({}).sort({ createdAt: -1 }).limit(3);
 
-        const totalProduct = await productModel.find({}).countDocuments()
+    const recentOrders = await customerOrder.find(
+      {},
+      { _id: 1, price: 1, payment_status: 1, delivery_status: 1, createdAt: 1 }
+    ).sort({ createdAt: -1 }).limit(10).lean();
 
-        const totalOrder = await customerOrder.find({}).countDocuments()
-
-        const totalSeller = await sellerModel.find({}).countDocuments()
-
-        const messages = await adminSellerMessage.find({}).limit(3)
-
-        const recentOrders = await customerOrder.find({}).limit(5)
-
-        responseReturn(res, 200, {
-            totalOrder,
-            totalSale: totalSele.length > 0 ? totalSele[0].totalAmount : 0,
-            totalSeller,
-            messages,
-            recentOrders,
-            totalProduct
-        })
-
-    } catch (error) {
-        console.log('get admin dashboard data error ' + error.messages)
-    }
-
-}
+    return responseReturn(res, 200, {
+      totalOrder,
+      totalSale,
+      totalSeller,
+      messages,
+      recentOrders,
+      totalProduct
+    });
+  } catch (error) {
+    console.log('get admin dashboard data error ' + error.message);
+    return responseReturn(res, 500, { message: 'Internal server error' });
+  }
+};
 

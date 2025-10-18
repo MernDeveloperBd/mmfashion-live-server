@@ -11,7 +11,7 @@ const sellerCustomerModel = require("../models/chat/sellerCustomerModel");
 const customerModel = require("../models/customerModel");
 const referralEventModel = require('../models/referralEventModel');
 
-const CLIENT_BASE_URL = process.env.CLIENT_BASE_URL || 'http://localhost:5173';
+const CLIENT_BASE_URL = process.env.CLIENT_BASE_URL ||  process.env.ADMIN_URL;
 
 
 class authController {

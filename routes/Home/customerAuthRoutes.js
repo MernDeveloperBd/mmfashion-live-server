@@ -14,4 +14,8 @@ router.put('/customer/change-password', authMiddleware, customerAuthController.c
 router.get('/customer/referral', authMiddleware, customerAuthController.getReferral);
 router.put('/customer/referral-code', authMiddleware, customerAuthController.updateReferralCode);
 
+// NEW: Profile (Protected)
+router.put('/customer/profile-update', authMiddleware, customerAuthController.updateProfile)
+router.get('/customer/me', authMiddleware, customerAuthController.me)
+
 module.exports = router

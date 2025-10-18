@@ -129,6 +129,28 @@ class sellerController {
       return responseReturn(res, 500, { error: error.message });
     }
   }
+
+  get_seller_public = async (req, res) => {
+  try {
+    const { sellerId } = req.params;
+    const seller = await sellerModel.findById(sellerId).lean();
+    if (!seller) return responseReturn(res, 404, { error: 'Seller not found' });
+
+    // শুধুমাত্র প্রয়োজনীয় ফিল্ড পাঠান (password কখনোই নয়)
+    const safe = {
+      _id: seller._id,
+      name: seller.name || '',
+      email: seller.email || '',
+      status: seller.status || '',
+      image: seller.image || '',
+      createdAt: seller.createdAt || null,
+      shopInfo: seller.shopInfo || {}
+    };
+    return responseReturn(res, 200, { seller: safe });
+  } catch (e) {
+    return responseReturn(res, 500, { error: e.message || 'Server error' });
+  }
+};
 }
 
 module.exports = new sellerController();

@@ -6,9 +6,47 @@ const createToken = require("../../utils/tokenCreate");
 const referralEventModel = require("../../models/referralEventModel");
 const { generateUniqueReferralCode, validateAlias } = require('../../utils/referral');
 
+const formidableLib = require('formidable');
+const cloudinary = require("cloudinary").v2;
+const fs = require('fs');
+
+// Cloudinary config (ensure env set)
+if (process.env.cloud_name && process.env.api_key && process.env.api_secret) {
+  cloudinary.config({
+    cloud_name: process.env.cloud_name,
+    api_key: process.env.api_key,
+    api_secret: process.env.api_secret,
+    secure: true
+  });
+}
+
+const pickString = (v) => {
+  if (v == null) return undefined;
+  if (Array.isArray(v)) v = v[0];
+  if (Buffer.isBuffer(v)) v = v.toString();
+  if (typeof v !== 'string') v = String(v);
+  return v.trim();
+};
+
+const pickDateOrNull = (v) => {
+  const s = pickString(v);
+  if (s === undefined) return undefined; // সেট করবেন না
+  if (s === '') return null;             // খালি দিলে null
+  const d = new Date(s);
+  return isNaN(d.getTime()) ? undefined : d;
+};
+
+const pickGender = (v) => {
+  const s = (pickString(v) || '').toLowerCase();
+  if (!s) return '';
+  if (['male', 'female', 'other'].includes(s)) return s;
+  return ''; // invalid হলে স্কিপ
+};
+
+
 const REFERRAL_THRESHOLD = 10;
 const REFERRAL_REWARD = 1;
-const CLIENT_BASE_URL = process.env.CLIENT_BASE_URL || 'http://localhost:5173';
+const CLIENT_BASE_URL = process.env.CLIENT_BASE_URL ||  process.env.ADMIN_URL;
 
 class customerAuthController {
 
@@ -219,8 +257,115 @@ class customerAuthController {
     }
   };
 
-  
+    // Get my profile (for refetch if needed)
+  me = async (req, res) => {
+    try {
+      const id = req.id;
+      const me = await customerModel.findById(id).select('-password');
+      if (!me) return responseReturn(res, 404, { error: 'Customer not found' });
+      return responseReturn(res, 200, { user: me });
+    } catch (e) {
+      return responseReturn(res, 500, { error: e.message });
+    }
+  };
 
+  // NEW: Update profile (JSON or multipart)
+ updateProfile = async (req, res) => {
+  try {
+    const id = req.id;
+    if (!id) return responseReturn(res, 401, { error: 'Unauthorized' });
+
+    const updateObj = {};
+    const applyFields = (src = {}) => {
+      const name = pickString(src.name);
+      if (name !== undefined) updateObj.name = name;
+
+      const phone = pickString(src.phone);
+      if (phone !== undefined) updateObj.phone = phone;
+
+      const gender = pickGender(src.gender);
+      if (gender !== undefined) updateObj.gender = gender;
+
+      const dob = pickDateOrNull(src.dob);
+      if (dob !== undefined) updateObj.dob = dob;
+
+      const address = pickString(src.address);
+      if (address !== undefined) updateObj.address = address;
+
+      const province = pickString(src.province);
+      if (province !== undefined) updateObj.province = province;
+
+      const city = pickString(src.city);
+      if (city !== undefined) updateObj.city = city;
+
+      const area = pickString(src.area);
+      if (area !== undefined) updateObj.area = area;
+
+      const postalCode = pickString(src.postalCode);
+      if (postalCode !== undefined) updateObj.postalCode = postalCode;
+    };
+
+    const contentType = (req.headers['content-type'] || '').toLowerCase();
+
+    // Multipart (image সহ)
+    if (contentType.includes('multipart/form-data')) {
+      let form;
+      const opts = { multiples: false, keepExtensions: true };
+      if (typeof formidableLib === 'function') form = formidableLib(opts);
+      else if (formidableLib?.IncomingForm) form = new formidableLib.IncomingForm(opts);
+      else return responseReturn(res, 500, { error: 'Unsupported formidable version' });
+
+      form.parse(req, async (err, fields, files) => {
+        if (err) return responseReturn(res, 500, { error: 'Form parse error' });
+
+        applyFields(fields);
+
+        // avatar upload if present
+        let imageField = files.image || files.avatar || files.file;
+        if (imageField) {
+          const f = Array.isArray(imageField) ? imageField[0] : imageField;
+          const filePath = f?.filepath || f?.path;
+          if (filePath) {
+            try {
+              const up = await cloudinary.uploader.upload(filePath, { folder: 'profile' });
+              updateObj.image = up.secure_url || up.url;
+            } catch (upErr) {
+              return responseReturn(res, 500, { error: 'Image upload failed', detail: upErr.message });
+            } finally {
+              fs.unlink(filePath, () => {});
+            }
+          }
+        }
+
+        if (!Object.keys(updateObj).length) {
+          return responseReturn(res, 400, { error: 'Nothing to update' });
+        }
+
+        const user = await customerModel
+          .findByIdAndUpdate(id, updateObj, { new: true })
+          .select('-password');
+
+        if (!user) return responseReturn(res, 404, { error: 'Customer not found' });
+        return responseReturn(res, 200, { message: 'Profile updated', user });
+      });
+
+    } else {
+      // JSON
+      applyFields(req.body || {});
+      if (!Object.keys(updateObj).length) {
+        return responseReturn(res, 400, { error: 'Nothing to update' });
+      }
+
+      const user = await customerModel
+        .findByIdAndUpdate(id, updateObj, { new: true })
+        .select('-password');
+
+      if (!user) return responseReturn(res, 404, { error: 'Customer not found' });
+      return responseReturn(res, 200, { message: 'Profile updated', user });
+    }
+  } catch (e) {
+    return responseReturn(res, 500, { error: e.message || 'Server error' });
+  }}
 }
 
 module.exports = new customerAuthController()

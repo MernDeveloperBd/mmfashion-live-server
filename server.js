@@ -14,17 +14,23 @@ const dbConnect = require('./utils/db')
 dbConnect()
 
 app.use(cors({
-  origin: ['http://localhost:5173', 'http://localhost:5174'],
-  credentials: true,
-  methods: ['GET','POST','PUT','DELETE','PATCH','OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+    origin: ['https://www.mmfashionworld.com', 'https://seller.mmfashionworld.com','https://www.seller.mmfashionworld.com',
+        'http://localhost:5173',
+        'http://localhost:5174'],
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
 
 
 const io = socket(server, {
     cors: {
-        origin: "*",
+        origin: ['https://www.mmfashionworld.com',
+            'https://seller.mmfashionworld.com',
+            'https://www.seller.mmfashionworld.com',
+            'http://localhost:5173',
+            'http://localhost:5174'],
         credentials: true
     }
 })
@@ -96,13 +102,13 @@ io.on('connection', (soc) => {
         io.emit('activeAdmin', { status: true })
 
     })
-    
+
     soc.on('send_seller_message', (msg) => {
         const customer = findCustomer(msg.receverId)
         if (customer !== undefined) {
             soc.to(customer.socketId).emit('seller_message', msg)
         }
-       
+
     })
     soc.on('send_customer_message', (msg) => {
         const seller = findSeller(msg.receverId)
@@ -125,16 +131,16 @@ io.on('connection', (soc) => {
         }
     })
 
-   soc.on('disconnect', () => {
-    const wasAdmin = admin.socketId === soc.id;
-    remove(soc.id);
-    removeAdmin(soc.id);
-    if (wasAdmin) {
-      io.emit('activeAdmin', { status: false });
-    }
-    io.emit('activeSeller', allSeller);
-    io.emit('activeCustomer', allCustomer);
-  });
+    soc.on('disconnect', () => {
+        const wasAdmin = admin.socketId === soc.id;
+        remove(soc.id);
+        removeAdmin(soc.id);
+        if (wasAdmin) {
+            io.emit('activeAdmin', { status: false });
+        }
+        io.emit('activeSeller', allSeller);
+        io.emit('activeCustomer', allCustomer);
+    });
 
 
 })
@@ -161,7 +167,7 @@ const analyticsRoutes = require('./routes/analyticsRoutes');
 
 app.use('/api', analyticsRoutes);
 app.use('/api', withdrawalRoutes);
-app.use('/api', contactRoutes);  
+app.use('/api', contactRoutes);
 app.use('/api', bannerRoutes)
 app.use('/api', paymentRoutes)
 app.use('/api', dashboardIndexRoutes)

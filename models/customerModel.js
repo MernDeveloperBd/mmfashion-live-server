@@ -6,6 +6,17 @@ const customerSchema = new Schema({
   password: { type: String, required: true, select: false },
   method: { type: String, required: true },
 
+  // Optional profile fields
+  phone: { type: String, default: '' },
+  gender: { type: String, enum: ['male','female','other',''], default: '' },
+  dob: { type: Date, default: null },
+  address: { type: String, default: '' },
+  province: { type: String, default: '' },
+  city: { type: String, default: '' },
+  area: { type: String, default: '' },
+  postalCode: { type: String, default: '' },
+  image: { type: String, default: '' },
+
   // Referral fields
   referralCode: { type: String, unique: true, sparse: true, trim: true },
   referredBy: { type: Types.ObjectId, ref: 'customers', default: null },
@@ -13,12 +24,11 @@ const customerSchema = new Schema({
     totalSignups: { type: Number, default: 0 }
   },
   referralBalance: { type: Number, default: 0 },
-   referralPending: { type: Number, default: 0 },
+  referralPending: { type: Number, default: 0 },
   referralCodeUpdatedAt: { type: Date, default: null },
 
 }, { timestamps: true })
 
-// Case-insensitive unique index for referralCode
 customerSchema.index(
   { referralCode: 1 },
   {
