@@ -1,12 +1,22 @@
 const { default: mongoose } = require("mongoose")
 
-const dbConnect = async()=>{
+const dbConnect = async () => {
     try {
-        await mongoose.connect(process.env.DB_URL,{
-            useNewURLParser:true })            
-    } catch (error) { 
-       ;
-        
+        if (process.env.mode === 'pro') {
+            await mongoose.connect(process.env.DB_URL, {
+                useNewURLParser: true              
+                
+            })
+            console.log("db connected");
+        } else {
+            await mongoose.connect(process.env.DB_PRO_URL, {
+                useNewURLParser: true
+            })
+             console.log("prodcction db connected");
+        }
+    } catch (error) {
+        ;
+
     }
 }
 

@@ -14,23 +14,15 @@ const dbConnect = require('./utils/db')
 dbConnect()
 
 app.use(cors({
-    origin: ['https://www.mmfashionworld.com', 'https://seller.mmfashionworld.com','https://www.seller.mmfashionworld.com',
-        'http://localhost:5173',
-        'http://localhost:5174'],
+    origin:process.env.mode === 'pro' ? [process.env.CLIENT_CUSTOMER_PRO_URL, process.env.CLIENT_ADMIN_PRO_URL]:['http://localhost:5173','http://localhost:5174'],
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
-
-
 const io = socket(server, {
     cors: {
-        origin: ['https://www.mmfashionworld.com',
-            'https://seller.mmfashionworld.com',
-            'https://www.seller.mmfashionworld.com',
-            'http://localhost:5173',
-            'http://localhost:5174'],
+        origin: process.env.mode === 'pro' ? [process.env.CLIENT_CUSTOMER_PRO_URL, process.env.CLIENT_ADMIN_PRO_URL]:['http://localhost:5173','http://localhost:5174'],
         credentials: true
     }
 })
