@@ -18,7 +18,7 @@ const customerSchema = new Schema({
   image: { type: String, default: '' },
 
   // Referral fields
-  referralCode: { type: String, unique: true, sparse: true, trim: true },
+  referralCode: { type: String,trim: true },
   referredBy: { type: Types.ObjectId, ref: 'customers', default: null },
   referralStats: {
     totalSignups: { type: Number, default: 0 }
