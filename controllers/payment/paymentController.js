@@ -26,8 +26,8 @@ class paymentController {
 
                 const accountLink = await stripe.accountLinks.create({
                     account: account.id,
-                    refresh_url: `${process.env.CLIENT_ADMIN_PRO_URL}/refresh`,
-                    return_url: `${process.env.CLIENT_ADMIN_PRO_URL}/success?activeCode=${uid}`,
+                    refresh_url: `${process.env.ADMIN_UR}/refresh`,
+                    return_url: `${process.env.ADMIN_UR}/success?activeCode=${uid}`,
                     type: 'account_onboarding'
                 })
                 await stripeModel.create({
@@ -42,8 +42,8 @@ class paymentController {
 
                 const accountLink = await stripe.accountLinks.create({
                     account: account.id,
-                    refresh_url: `${process.env.CLIENT_ADMIN_PRO_URL}/refresh`,
-                    return_url: `${process.env.CLIENT_ADMIN_PRO_URL}/success?activeCode=${uid}`,
+                    refresh_url: `${process.env.ADMIN_UR}/refresh`,
+                    return_url: `${process.env.ADMIN_UR}/success?activeCode=${uid}`,
                     type: 'account_onboarding'
                 })
                 await stripeModel.create({
