@@ -2,11 +2,11 @@ const { sendMail } = require('../../utils/mailer');
 
 const APP_NAME   = process.env.NODEMAILER_USER  || 'MM Fashion';
 const ADMIN_MAIL = process.env.ADMIN_EMAIL       || process.env.NODEMAILER_EMAIL;
-const CLIENT_URL = process.env.CLIENT_URL        || 'http://localhost:5173';
+const clientUrl = process.env.CLIENT_URL        || 'http://localhost:5173';
 
 const money = (n=0) => `TK ${Number(n || 0).toLocaleString('en-BD')}`;
 const BRAND_COLOR = '#0d6b54'; // requested theme color
-const displayUrl = CLIENT_URL.replace(/^https?:\/\//,'').replace(/\/$/,'');
+const displayUrl = clientUrl.replace(/^https?:\/\//,'').replace(/\/$/,'');
 
 // order.products format in your DB = flat array of { name, price, quantity, selectedColor, selectedSize, ... }
 function buildBuyerRows(order) {
@@ -82,12 +82,12 @@ function buyerAdminHtml({ title='Order', order, user, shippingFee = 0 }) {
 
         <div style="margin-top:16px;font-size:12px;color:#666">
           Manage order: 
-          <a href="${CLIENT_URL}/dashboard/orders" style="color:${BRAND_COLOR};text-decoration:none">My Orders</a>
+          <a href="${clientUrl}/dashboard/orders" style="color:${BRAND_COLOR};text-decoration:none">My Orders</a>
         </div>
       </div>
       <div style="background:#f1f5f9;padding:12px 18px;font-size:12px;color:#64748b;text-align:center">
         This is an automated email. Please do not reply.<br/>
-        <a href="${CLIENT_URL}" style="color:${BRAND_COLOR};text-decoration:none;">${displayUrl}</a>
+        <a href="${clientUrl}" style="color:${BRAND_COLOR};text-decoration:none;">${displayUrl}</a>
       </div>
     </div>
   </div>`;
@@ -153,7 +153,7 @@ function sellerHtml({ title='New Order', user, shippingInfo, group }) {
       </div>
       <div style="background:#f1f5f9;padding:12px 18px;font-size:12px;color:#64748b;text-align:center">
         This is an automated email. Please do not reply.<br/>
-        <a href="${CLIENT_URL}" style="color:${BRAND_COLOR};text-decoration:none;">${displayUrl}</a>
+        <a href="${clientUrl}" style="color:${BRAND_COLOR};text-decoration:none;">${displayUrl}</a>
       </div>
     </div>
   </div>`;
