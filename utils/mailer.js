@@ -3,7 +3,7 @@ const nodemailer = require('nodemailer');
 const FROM_NAME = process.env.NODEMAILER_USER || 'MM Fashion World';
 const FROM_EMAIL = process.env.NODEMAILER_EMAIL;
 
-const transporter = nodemailer.createTransporter({
+const transporter = nodemailer.createTransport({
   host: 'smtp.gmail.com',
   port: 587,
   secure: false,
