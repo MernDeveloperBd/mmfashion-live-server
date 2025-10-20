@@ -1,5 +1,5 @@
 const nodemailer = require('nodemailer');
-const ContactInquiry = require('../models/contactInquiryModel');  // Ensure model exists
+const ContactInquiry = require('../models/contactInquiryModel'); 
 require('dotenv').config();  // Load .env
 
 // ✅ Transporter Setup
