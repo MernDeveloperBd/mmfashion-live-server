@@ -1,12 +1,12 @@
-const { sendMail } = require('../../utils/mailer');
+const { sendMail } = require('./mailer'); // Adjust path as needed
 
-const APP_NAME   = process.env.NODEMAILER_USER  || 'MM Fashion';
-const ADMIN_MAIL = process.env.ADMIN_EMAIL       || process.env.NODEMAILER_EMAIL;
-const clientUrl = process.env.CLIENT_URL        || 'http://localhost:5173';
+const APP_NAME = process.env.NODEMAILER_USER || 'MM Fashion';
+const ADMIN_MAIL = process.env.ADMIN_EMAIL || process.env.NODEMAILER_EMAIL;
+const clientUrl = process.env.CLIENT_URL || 'http://localhost:5173';
 
-const money = (n=0) => `TK ${Number(n || 0).toLocaleString('en-BD')}`;
+const money = (n = 0) => `TK ${Number(n || 0).toLocaleString('en-BD')}`;
 const BRAND_COLOR = '#0d6b54'; // requested theme color
-const displayUrl = clientUrl.replace(/^https?:\/\//,'').replace(/\/$/,'');
+const displayUrl = clientUrl.replace(/^https?:\/\//, '').replace(/\/$/, '');
 
 // order.products format in your DB = flat array of { name, price, quantity, selectedColor, selectedSize, ... }
 function buildBuyerRows(order) {
@@ -24,7 +24,8 @@ function buildBuyerRows(order) {
   `).join('');
 }
 
-function buyerAdminHtml({ title='Order', order, user, shippingFee = 0 }) {
+function buyerAdminHtml({ title = 'Order', order, user, shippingFee = 0 }) {
+  if (!order) return '<p>Invalid order data.</p>'; // Null check
   const rows = buildBuyerRows(order);
   const shipping = order?.shippingInfo || {};
   // আপনার order.price = subtotal + shipping_fee
@@ -94,7 +95,8 @@ function buyerAdminHtml({ title='Order', order, user, shippingFee = 0 }) {
 }
 
 // seller-specific html using grouped input (products groups from request) or authorOrders
-function sellerHtml({ title='New Order', user, shippingInfo, group }) {
+function sellerHtml({ title = 'New Order', user, shippingInfo, group }) {
+  if (!group) return '<p>Invalid group data.</p>'; // Null check
   const rows = (Array.isArray(group?.products) ? group.products : []).map((it) => {
     const p = it?.productInfo || it || {};
     return `
@@ -161,6 +163,7 @@ function sellerHtml({ title='New Order', user, shippingInfo, group }) {
 
 // senders
 async function sendOrderPlacedEmails({ order, user, groups = [], sellers = [], shippingFee = 0 }) {
+  if (!order || !user) return; // Null check
   const subject = `${APP_NAME} • Order Placed ${order?._id || ''}`;
 
   // buyer
@@ -188,7 +191,7 @@ async function sendOrderPlacedEmails({ order, user, groups = [], sellers = [], s
   groups.forEach(g => { if (g?.sellerId) map.set(String(g.sellerId), g); });
 
   await Promise.allSettled(
-    sellers
+    (sellers || [])
       .filter(s => s?.email)
       .map(s => {
         const g = map.get(String(s._id)) || null;
@@ -204,6 +207,7 @@ async function sendOrderPlacedEmails({ order, user, groups = [], sellers = [], s
 }
 
 async function sendOrderPaidEmails({ order, user, authorOrders = [], sellers = [] }) {
+  if (!order || !user) return; // Null check
   const subject = `${APP_NAME} • Payment Confirmed ${order?._id || ''}`;
 
   // buyer
@@ -231,7 +235,7 @@ async function sendOrderPaidEmails({ order, user, authorOrders = [], sellers = [
   authorOrders.forEach(ao => { if (ao?.sellerId) map.set(String(ao.sellerId), ao); });
 
   await Promise.allSettled(
-    sellers
+    (sellers || [])
       .filter(s => s?.email)
       .map(s => {
         const g = map.get(String(s._id)) || null;
